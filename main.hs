@@ -1,4 +1,7 @@
 module Main where
 
+import ViolaJones
+
+
 main :: IO()
-main = print "SUP OMAR"
+main = print test

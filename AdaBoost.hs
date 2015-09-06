@@ -2,6 +2,9 @@ module AdaBoost where
 
 import Data.Matrix
 
+import qualified Debug.Trace as T
+
+--1 : white 0: black
 baseFeatureShapes =
     [fromLists [[1,0]],
     fromLists [[0],[1]],
@@ -10,16 +13,40 @@ baseFeatureShapes =
 
 type TData = [(Matrix Int, Int)]
 
-data Feature = Int Int Int Int Int
+--shape row col width height
+data Feature = Feature Int Int Int Int Int
 
-integralImage :: Matrix Int -> Feature -> Int
-integralImage m (Feature x y w h) = 
-    where ii 0 _ = 0
-          ii _ 0 = 0
-          ii r c = ii (r-1) c + ii r (c-1) - ii (r-1) (c-1)
+safeGetElem 0 _ _ = 0
+safeGetElem _ 0 _ = 0
+safeGetElem r c s = getElem r c s
 
-weakClassifier :: Int -> Int -> Feature -> (Matrix Int -> Int)
-weakClassifier th p f = \m -> if p * integralImage f m < p * th then 1 else 0
+integralImage :: Matrix Int -> Matrix Int
+integralImage m = ii (fromList (nrows m) (ncols m) [0..]) 1 1
+    where fillCell s r c = setElem (safeGetElem (r-1) c s + safeGetElem r (c-1) s
+            - safeGetElem (r-1) (c-1) s + safeGetElem r c m) (r, c) s
+          ii s r c
+              |r < nrows s = ii (fillCell s r c) (r + 1) c
+              |c < ncols s = ii (fillCell s r c) 1 (c + 1)
+              |otherwise = fillCell s r c
+
+getFeatureScore :: Matrix Int -> Feature -> Int
+getFeatureScore s (Feature sh row col width height)
+    |sh == 0 = getSquare row col width height - getSquare row (col + width) width height
+    |sh == 1 = 0 - getSquare row col width height + getSquare (row + height) col width height
+    |sh == 2 = getSquare row col width height 
+        - getSquare row (col + width) width height
+        + getSquare row (col + 2 * width) width height
+    |sh == 3 = getSquare row col width height - getSquare row (col + width) width height
+        - getSquare (row + height) col width height + getSquare (row + height) (col + width) width height
+    where getSquare r c w h = safeGetElem (r' + h) (c' + w) s
+                              - safeGetElem (r' + h) c' s
+                              - safeGetElem r' (c' + w) s
+                              + safeGetElem r' c' s
+              where r' = r - 1
+                    c' = c - 1
+
+weakClassifier :: Int -> Int -> Feature -> Matrix Int -> (Matrix Int -> Int)
+weakClassifier th p f intImg = \m -> if p * getFeatureScore intImg f < p * th then 1 else 0
 
 initWeight :: Int -> Int -> Int -> Float
 initWeight n p y = if y == 1
@@ -29,8 +56,10 @@ initWeight n p y = if y == 1
 initWeights :: TData -> Int -> Int ->[Float]
 initWeights ds n p = map (\x -> initWeight n p $ snd x) ds
 
-chooseBestWeakClassifier :: TData -> [Float] -> [Int] -> (Matrix Int -> Int, Float, [Int])
-chooseBestWeakClassifier td w fv =
+-- chooseBestWeakClassifier :: TData -> [Float] -> [Int] -> (Matrix Int -> Int, Float, [Int])
+-- chooseBestWeakClassifier td w fv =
 
-computeNewWeights :: [Float] -> Float -> [Int] -> Float
-computeNewWeights ow epsilon y = map(ow *) beta(epsilon)
+-- computeNewWeights :: [Float] -> Float -> [Int] -> Float
+-- computeNewWeights ow epsilon y = map(ow *) beta(epsilon)
+
+-- main = print $ integralImage $ fromList n n [1..n*n]

@@ -2,8 +2,6 @@ module AdaBoost where
 
 import Data.Matrix
 
-import qualified Debug.Trace as T
-
 --1 : white 0: black
 baseFeatureShapes =
     [fromLists [[1,0]],
@@ -29,15 +27,16 @@ integralImage m = ii (fromList (nrows m) (ncols m) [0..]) 1 1
               |c < ncols s = ii (fillCell s r c) 1 (c + 1)
               |otherwise = fillCell s r c
 
+--Matrix is integralimage
 getFeatureScore :: Matrix Int -> Feature -> Int
 getFeatureScore s (Feature sh row col width height)
-    |sh == 0 = getSquare row col width height - getSquare row (col + width) width height
-    |sh == 1 = 0 - getSquare row col width height + getSquare (row + height) col width height
-    |sh == 2 = getSquare row col width height 
-        - getSquare row (col + width) width height
-        + getSquare row (col + 2 * width) width height
-    |sh == 3 = getSquare row col width height - getSquare row (col + width) width height
-        - getSquare (row + height) col width height + getSquare (row + height) (col + width) width height
+    |sh == 0 = 0 - getSquare row col width height + getSquare row (col + width) width height
+    |sh == 1 = getSquare row col width height - getSquare (row + height) col width height
+    |sh == 2 = 0 - getSquare row col width height 
+        + getSquare row (col + width) width height
+        - getSquare row (col + 2 * width) width height
+    |sh == 3 = 0 - getSquare row col width height + getSquare row (col + width) width height
+        + getSquare (row + height) col width height - getSquare (row + height) (col + width) width height
     where getSquare r c w h = safeGetElem (r' + h) (c' + w) s
                               - safeGetElem (r' + h) c' s
                               - safeGetElem r' (c' + w) s
@@ -61,5 +60,9 @@ initWeights ds n p = map (\x -> initWeight n p $ snd x) ds
 
 -- computeNewWeights :: [Float] -> Float -> [Int] -> Float
 -- computeNewWeights ow epsilon y = map(ow *) beta(epsilon)
+-- n=10
+-- intImg = integralImage $ fromList n n [1..n*n]
 
--- main = print $ integralImage $ fromList n n [1..n*n]
+-- main = do 
+--     print $ getFeatureScore intImg (Feature 2 3 3 2 2)
+--     print $ fromList n n [1..n*n]
